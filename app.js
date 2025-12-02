@@ -1,12 +1,14 @@
+// 1. ARREGLO PARA RENDER (Si falla dotenv, no pasa nada)
 try {
-    require('dotenv').config();
+  require('dotenv').config();
 } catch (e) {
-    console.log("En Render no hace falta dotenv, seguimos...");
+  console.log("En Render no usamos .env, usamos variables de entorno.");
 }
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const _ = require("lodash"); // Para poner mayúsculas automáticas
+const _ = require("lodash"); // Arreglo para listas dinámicas
 
 const app = express();
 
@@ -14,56 +16,40 @@ app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static("public"));
 
-// --- 1. CONEXIÓN (Cumple: "Configuración de MongoDB Atlas") ---
+// 2. CONEXIÓN A MONGODB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("Conectado a MongoDB Atlas - Listas Dinámicas"))
+  .then(() => console.log("Conectado a MongoDB Atlas"))
   .catch(err => console.log(err));
 
-// --- 2. ESQUEMAS (Cumple: "Modificación del Código - Colecciones") ---
-
-// Esquema para tareas sueltas
+// 3. ESQUEMAS
 const itemsSchema = {
   name: String
 };
 const Item = mongoose.model("Item", itemsSchema);
 
-// Esquema para LISTAS (Cumple: "lists: Para almacenar listas personalizadas")
 const listSchema = {
   name: String,
-  items: [itemsSchema] // Cada lista guarda un array de tareas dentro
+  items: [itemsSchema]
 };
 const List = mongoose.model("List", listSchema);
 
-// Tareas por defecto (para que la lista no aparezca vacía al principio)
 const defaultItems = [
-  new Item({ name: "Comprar pan 🥖" }),
-  new Item({ name: "Repasar apuntes 📚" }),
-  new Item({ name: "Ir al gimnasio 💪" })
+  new Item({ name: "¡Bienvenida a tu lista!" }),
+  new Item({ name: "Dale al + para añadir" })
 ];
 
-
-// --- 3. RUTAS (Cumple: "Mostrar tareas" y "Añadir tareas") ---
-
-// Si entran en la raíz (/), les llevamos a la lista "General" automáticamente
-app.get("/", function(req, res) {
-    res.redirect("/TareasIratxe");
-});
-
-// RUTA PRINCIPAL (DASHBOARD) - Muestra TODAS las listas
+// 4. RUTA PRINCIPAL (DASHBOARD) - AQUÍ ESTABA EL FALLO
+// Esta es la "puerta de entrada" que te faltaba
 app.get("/", async function(req, res) {
   try {
-    // 1. Buscamos todas las listas que existan en la base de datos
     const foundLists = await List.find({});
-
-    // 2. Si no hay ninguna (está vacío), creamos dos por defecto para que no se vea feo
+    // Si no hay listas, creamos dos básicas
     if (foundLists.length === 0) {
-      const list1 = new List({ name: "Personal", items: defaultItems });
-      const list2 = new List({ name: "Trabajo", items: defaultItems });
-      await list1.save();
-      await list2.save();
-      res.redirect("/"); // Recargamos para que aparezcan
+      await new List({ name: "Personal", items: defaultItems }).save();
+      await new List({ name: "Trabajo", items: defaultItems }).save();
+      res.redirect("/");
     } else {
-      // 3. Si hay listas, las enviamos TODAS a la vista
+      // Mostramos el Dashboard
       res.render("list", { allLists: foundLists });
     }
   } catch (err) {
@@ -71,31 +57,48 @@ app.get("/", async function(req, res) {
   }
 });
 
-// AÑADIR TAREA (POST)
+// 5. RUTA PARA LISTAS NUEVAS (Ej: /clase, /gimnasio)
+app.get("/:customListName", async function(req, res){
+  const customListName = _.capitalize(req.params.customListName);
+
+  try {
+    const foundList = await List.findOne({name: customListName});
+    if (!foundList) {
+      const list = new List({
+        name: customListName,
+        items: defaultItems
+      });
+      await list.save();
+      res.redirect("/"); // Volvemos al Dashboard para ver la nueva lista
+    } else {
+      res.redirect("/"); // Si ya existe, volvemos al dashboard
+    }
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+// 6. AÑADIR TAREA
 app.post("/", async function(req, res){
   const itemName = req.body.newItem;
-  const listName = req.body.list; // El botón nos dice en qué lista estamos
+  const listName = req.body.list; 
 
   const item = new Item({ name: itemName });
 
-  // Buscamos la lista correcta y guardamos la tarea DENTRO de ella
   const foundList = await List.findOne({name: listName});
   foundList.items.push(item);
   await foundList.save();
-  
-  // Recargamos la página de esa lista específica
-  res.redirect("/" + listName);
+  res.redirect("/");
 });
 
-// ELIMINAR TAREA (Cumple: "Eliminar tareas específicas")
+// 7. BORRAR TAREA
 app.post("/delete", async function(req, res){
   const checkedItemId = req.body.checkbox;
-  const listName = req.body.listName; // Necesitamos saber de qué lista borrar
+  const listName = req.body.listName;
 
   try {
-    // Usamos $pull para sacar la tarea del array de esa lista
     await List.findOneAndUpdate({name: listName}, {$pull: {items: {_id: checkedItemId}}});
-    res.redirect("/" + listName);
+    res.redirect("/");
   } catch (err) {
     console.log(err);
   }
