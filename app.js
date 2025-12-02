@@ -1,5 +1,7 @@
-if (process.env.NODE_ENV !== 'production') {
+try {
     require('dotenv').config();
+} catch (e) {
+    console.log("En Render no hace falta dotenv, seguimos...");
 }
 const express = require("express");
 const bodyParser = require("body-parser");
