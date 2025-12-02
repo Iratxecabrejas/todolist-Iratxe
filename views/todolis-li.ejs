@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To Do</title>
+    <link rel="stylesheet" type="text/css" href="/css/styles.css">
+</head>
+
+<body>
+    <div class="box" id="heading">
+        <h1>It is a <%= day %> ! </h1>
+        <h2>Indeed the <%= today %> ! </h2>
+    </div>
+
+    <h3>number <%= today.getDay() %> ! </h3>
+    <h4>O sea <%= nombreDia %> ! </h4>
+
+    <div class="box">
+        <% for(let i=0; i < items.length; i++) { %>
+            <li class="item">
+                <%= items[i] %>
+            </li>
+            <% } %>
+    </div>
+
+    <% if (today.getDay()===6 || today.getDay()===7) {%>
+        <h1 style="color: red">It is a <%= day %> ! </h1>
+        <% }else {%>
+            <h1 style="color: blue">It is a <%= day %> ! </h1>
+            <% }%>
+
+
+                <ul>
+                    <li>First</li>
+                    <li>Second</li>
+                    <li>Third</li>
+                    <!-- <li>
+                         <%= //newListItem %>
+                    </li> -->
+
+                </ul>
+
+                <form action="/" method="post">
+                    <input type="text" name="newitem">
+                    <button type="submit">Add</button>
+                </form>
+
+</body>
+
+</html>
